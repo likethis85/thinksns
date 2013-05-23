@@ -1,0 +1,63 @@
+<include file="__THEME__/header" />
+<style>
+.header_bg{display:none;height:0px;}
+</style>
+<!-- 编辑器样式文件 -->
+<link href="__PUBLIC__/js/editor/editor/theme/base-min.css" rel="stylesheet"/>
+<!--[if lt IE 8]><!-->
+<!-- 全局风格CSS -->
+<link href="__THEME__/public.css?20110429" rel="stylesheet" type="text/css" />
+<link href="__THEME__/layout.css?20110429" rel="stylesheet" type="text/css" />
+<link href="__THEME__/main.css?20110429" rel="stylesheet" type="text/css" />
+<link href="../Public/login.css" rel="stylesheet" type="text/css" />
+<div class="wrap_login">
+<div class="login_holder">
+	<div class="login_header">
+    <div class="quike_reg">
+    <span>第一次使用{$ts['site']['site_name']}?</span>
+    <a href="{:U('home/Public/register')}" title="立即注册" class="regbtn2"> &nbsp;</a></div>
+  	<php>if(!$ts['site']['site_logo']){</php>
+  	<a href="#" class="logo_login" style="background:url(__THEME__/images/logo.png) no-repeat left 0;_background:url(__THEME__/images/logo.gif) no-repeat left 0;"></a>
+  	<php>}else{</php>
+  	<a href="#" class="logo_login" style="background:url({$ts['site']['site_logo']}) no-repeat left 0;">&nbsp;</a>
+  	<php>}</php>
+    </div>
+</div>
+<div class="content_login">
+  <div class="main_login">
+  <div class="box_login_l" style="background:url(<php>if(isset($ts['site']['banner_logo'])){ echo $ts['site']['banner_logo'];}else{ echo __THEME__.'/images/login_bg.jpg';}</php>) no-repeat left center"></div>
+  <div class="login">
+    <dl id="ppcontid" class="logform">
+        <form action="{:U('home/Public/doLogin')}" method="post">
+	       <div class="frm">
+	        	<label id="_login_email_label" class="form_label" style="display:block;" onclick="$(this).hide();$('#email').focus();">邮箱</label>
+	        	<input type="text" id="email" name="email" class="text" title="邮箱" autocomplete="off" value="" onblur="if($(this).val()=='') $('#_login_email_label').show();" onfocus="$('#_login_email_label').hide();" />
+      </div>
+          <div class="frm">
+              <label id="_login_password_label" class="form_label" style="display:block;" onclick="$(this).hide();$('#password').focus();" >密码</label>
+              <input type="password" title="密码" value="" id="password" name="password" class="text" style="display: inline;" onblur="if($(this).val()=='') $('#_login_password_label').show();" onfocus="$('#_login_password_label').hide();" />
+          </div>
+          <eq name="login_verify_on" value="1">
+          <div class="frm">
+              <input name="verify" type="text" class="text alM" title="验证码" id="verify" style="width:50px;height:22px;padding:0 3px;" value="" />
+              <a href="javascript:void(0);" onclick="changeverify()"><img src="__ROOT__/public/captcha.php" id="verifyimg" alt="换一张" class="alM" /></a>
+          </div>
+          </eq>
+          <div class="frm">
+         	  <a class="fuc0 right" href="{:U('home/Public/sendPassword')}">忘记密码？</a>
+	          <label>
+	            <input name="remember" type="checkbox" value="1" />
+	            记住登录状态
+              </label>
+          </div>
+	      <div class="frm">
+              <input type="submit" value="" class="logbtn hand" />
+          </div>
+        </form>
+        {:Addons::hook('login_input_footer',array('regInfo'=>$regInfo))}
+    </dl>
+  </div>
+</div>
+</div>
+<include file="__THEME__/footer" />
+</div>
