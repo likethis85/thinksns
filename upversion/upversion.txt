@@ -1,0 +1,85 @@
+﻿1、备份数据库和代码
+
+  升级之前切记请自行备份好你的数据库和代码文件，还有data目录下的用户文件，以便当升级出现异常时可以恢复。
+
+备份方式可以自己定，也可以按下面的推荐方案进行备份
+
+a、下载社区的全部代码文件，特别是/data目录下的用户上传的文件到本地电脑
+b、如果本地电脑有安装数据库，使用Navicat for MySQL软件（也可以是其它数据库管理软件）把网站的数据库数据全部同步到本地库; 如果本地没有安装数据库，使用数据库管理软件把数据库导出SQL文件保存到本地电脑里
+
+
+2、下载V3正式版的安装包
+
+下载地址：http://d1.thinksns.com/ThinkSNS_V3_2013031501.zip
+
+请确认是V3正式版的安装包，2013.03.15之前发布Beta版和RC版都不包含2.8升级的功能
+
+3、配置升级包里的数据库信息
+
+解压上面下载的安装包，由于升级需要从2.8旧的新数据库转换到新的数据库，因此需要配置upversion/index.php文件中的2个数据库的连接信息，按你的项目实际情况配置以下信息：
+
+// V2.8旧数据库的配置
+$old_db_conf['DB_TYPE'] = 'mysql';
+$old_db_conf['DB_HOST'] = '127.0.0.1';
+$old_db_conf['DB_NAME'] = 'thinksns_2_8';
+$old_db_conf['DB_USER'] = 'root';
+$old_db_conf['DB_PWD'] = '';
+$old_db_conf['DB_PORT'] = 3306;
+$old_db_conf['DB_PREFIX'] = 'ts_';
+$old_db_conf['DB_CHARSET'] = 'utf8';
+// V3.0新数据库配置
+$db_conf['DB_TYPE'] = 'mysql';
+$db_conf['DB_HOST'] = '127.0.0.1';
+$db_conf['DB_NAME'] = 'thinksns_3_0';
+$db_conf['DB_USER'] = 'root';
+$db_conf['DB_PWD'] = '';
+$db_conf['DB_PORT'] = 3306;
+$db_conf['DB_PREFIX'] = 'ts_';
+$db_conf['DB_CHARSET'] = 'utf8';
+
+配置完保存退出
+
+4、配置上传文件的目录常量
+
+打开V3的代码目录下的/core/core.php文件，找到以下两行
+
+tsdefine('UPLOAD_PATH'	,	DATA_PATH.'/upload');
+tsdefine('UPLOAD_URL'	,	SITE_URL.'/data/upload');
+
+把它修改成：
+
+tsdefine('UPLOAD_PATH'	,	DATA_PATH.'/uploads');
+tsdefine('UPLOAD_URL'	,	SITE_URL.'/data/uploads');
+
+然后保存退出
+
+5、把文件上传到你的站点
+
+上传文件前请把V2.8的除data目录的其它目录和文件删除（切记不要删除/data目录），然后上传V3版本的新文件, 新的data目录与旧的data目录合并即可
+
+6、执行安装V3版本操作
+
+http://你的网址/install/index.php
+
+安装过程中到输入数据库那一步时注意数据库的配置信息要与上面第二步中V3.0新数据库配置信息一致，否则到时升级功能可能连接数据失败。
+
+安装完成后请先不要进入社区，要先执行下面的步骤
+
+7、执行数据升级操作
+
+执行： http://你的网址/upversion/index.php
+
+升级时间可能比较长，升级过程中千万不要关闭浏览器或者停下浏览器访问的进程，直到显示‘The upgrade has been completed’时，表示执行完毕
+
+8、执行数据更新和文件更新操作
+public / Test / upFacePath
+登录进入社区，执行：  http://你的网址/index.php?app=public&mod=Test&act=testUserData
+
+上面执行完毕后再执行头像文件转换的功能：http://你的网址/index.php?app=public&mod=Test&act=upFacePath
+
+执行完毕后即整个升级结束。如果到此发现社区升级不成功，执行下面的失败回退步骤
+
+9、升级失败回退方案
+
+如果上面升级不成功，可以删除V3全部文件和数据库，再把第一步备份的文件上传到你的网站中，然后恢复数据库即可。
+

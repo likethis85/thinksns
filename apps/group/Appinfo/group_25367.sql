@@ -1,1 +1,0 @@
-ALTER TABLE  `ts_group` ADD  `openWeibo` TINYINT( 1 ) NOT NULL DEFAULT 1 AFTER  `brower_level`;

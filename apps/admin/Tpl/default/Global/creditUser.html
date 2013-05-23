@@ -6,6 +6,8 @@
     <li><a href="{:U('admin/Global/credit')}">积分规则</a></li>
     <li><a href="{:U('admin/Global/creditType')}">积分类型</a></li>
     <li><a href="{:U('admin/Global/creditUser')}" class="on">设置用户积分</a></li>
+    <li><a href="{:U('admin/Global/creditLevel')}">积分等级</a></li>
+    </ul>
     </ul>
   </div>
 
@@ -15,7 +17,7 @@
     <dl class="lineD">
       <dt>用户ID：</dt>
       <dd>
-       		<input size="30" name="uId" /> 
+       		<input size="30" name="uId" class="txt"/> 
 			<p>根据用户ID,多个用户用英文逗号“,”隔开,若不限制ID则留空。</p>
       </dd>
     </dl>
@@ -55,7 +57,7 @@
     <dl class="lineD">
       <dt>{$vo.alias}：</dt>
       <dd>
-            <input name="{$vo.name}" class="txt" value="0"/>
+            <input name="{$vo.name}" class="s-txt" value="0"/>
 			<p>正为加，负为减</p>
       </dd>
     </dl>

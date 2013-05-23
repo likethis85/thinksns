@@ -8,14 +8,14 @@ $i_message['install_lock'] = '您已安装过ThinkSNS ' . $_TSVERSION . '，如�
 $i_message['install_title'] = 'ThinkSNS ' . $_TSVERSION . ' 安装向导';
 $i_message['install_wizard'] = '安装向导';
 $i_message['install_warning'] = '<strong>注意 </strong>这个安装程序仅仅用在你首次安装ThinkSNS。如果你已经在使用 ThinkSNS 或者要更新到一个新版本，请不要运行这个安装程序。';
-$i_message['install_intro'] = '<h4>安装须知</h4><p>一、运行环境需求：PHP(5.2.0+)+MYSQL(4.1+)</p><p>二、安装步骤：<br /><br />1、使用ftp工具以二进制模式，将该软件包里的 thinksns 目录及其文件上传到您的空间，假设上传后目录仍旧为 thinksns。<br /><br />2、如果您使用的是Linux 或 Freebsd 服务器，先确认以下目录或文件属性为 (777) 可写模式。<br /><br />目录: data<br />目录: _runtime<br />目录: install<br />文件: config.inc.php<br />3、运行 http://yourwebsite/thinksns/install/install.php 安装程序，填入安装相关信息与资料，完成安装！<br />4、运行 http://yourwebsite/thinksns/cleancache.php 清除系统缓存文件！<br />5、运行 http://yourwebsite/thinksns/index.php 开始体验ThinkSNS！</p>';
+$i_message['install_intro'] = '<h4>安装须知</h4><p>一、运行环境需求：PHP(5.2.0+)+MYSQL(4.1+)</p><p>二、安装步骤：<br /><br />1、使用ftp工具以二进制模式，将该软件包里的 thinksns 目录及其文件上传到您的空间，假设上传后目录仍旧为 thinksns。<br /><br />2、如果您使用的是Linux 或 Freebsd 服务器，先确认以下目录或文件属性为 (777) 可写模式。<br /><br />目录: data<br />目录: _runtime<br />目录: install<br />目录: config<br />3、运行 http://yourwebsite/thinksns/install/install.php 安装程序，填入安装相关信息与资料，完成安装！<br />4、运行 http://yourwebsite/thinksns/cleancache.php 清除系统缓存文件！<br />5、运行 http://yourwebsite/thinksns/index.php 开始体验ThinkSNS！</p>';
 $i_message['install_start'] = '开始安装ThinkSNS';
 $i_message['install_license_title'] = '安装许可协议';
 $i_message['install_license'] = '版权所有 (C) 2008-'.date('Y').'，ThinkSNS.com 保留所有权利。
 
 ThinkSNS是由ThinkSNS项目组独立开发的SNS程序，基于PHP脚本和MySQL数据库。本程序源码开放的，任何人都可以从互联网上免费下载，并可以在不违反本协议规定的前提下进行使用而无需缴纳程序使用费。
 
-官方网址： www.ThinkSNS.com 交流社区： t.ThinkSNS.com
+官方网址： www.thinksns.com 交流社区： t.thinksns.com
 
 为了使你正确并合法的使用本软件，请你在使用前务必阅读清楚下面的协议条款：
 
@@ -52,6 +52,10 @@ $i_message['install_dirmod'] = '目录和文件是否可写，如果发生错误
 $i_message['install_env'] = '服务器配置';
 $i_message['php_os'] = '操作系统';
 $i_message['php_version'] = 'PHP版本';
+$i_message['php_memory'] = '内存限制';
+$i_message['php_memory_error'] = 'PHP可用内存太小，请调整php.ini中memory_limit设置，推荐修改为32M';
+$i_message['php_session'] = 'SESSION支持';
+$i_message['php_session_error']	= 'SESSION不可用，请检查php.ini中session.save_path是否可写';
 $i_message['file_upload'] = '附件上传';
 $i_message['support'] = '支持';
 $i_message['unsupport'] = '不支持';

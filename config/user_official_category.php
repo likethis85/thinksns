@@ -1,0 +1,1 @@
+a:3:{i:1;a:5:{s:2:"id";s:1:"1";s:3:"pid";s:1:"0";s:5:"title";s:13:"官方分类1";s:5:"level";i:0;s:5:"child";N;}i:2;a:5:{s:2:"id";s:1:"2";s:3:"pid";s:1:"0";s:5:"title";s:13:"官方分类2";s:5:"level";i:0;s:5:"child";N;}i:3;a:5:{s:2:"id";s:1:"3";s:3:"pid";s:1:"0";s:5:"title";s:13:"官方分类3";s:5:"level";i:0;s:5:"child";N;}}

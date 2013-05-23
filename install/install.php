@@ -1,30 +1,30 @@
 <?php
-/*
- * tThinkSNS 安装文件,修改自pbdigg.
+/**
+ * ThinkSNS安装文件，修改自pbdigg。
  */
-
 error_reporting(0);
 session_start();
 define('THINKSNS_INSTALL', TRUE);
 define('THINKSNS_ROOT', str_replace('\\', '/', substr(dirname(__FILE__), 0, -7)));
 
-$_TSVERSION = '2.8';
+$_TSVERSION = '3.0';
 
 include 'install_function.php';
 include 'install_lang.php';
 
-$timestamp				=	time();
-$ip						=	getip();
-$installfile			=	't_thinksns_com.sql';
-$thinksns_config_file	=	'config.inc.php';
+$timestamp = time();
+$ip = getip();
+$installfile = 't_thinksns_com.sql';
+$thinksns_config_file = 'config.inc.php';
+$_SESSION['thinksns_install'] = $timestamp;
 
-//判断是否安装过
+// 判断是否安装过
 header('Content-Type: text/html; charset=utf-8');
-if (file_exists('install.lock'))
+if(file_exists('install.lock'))
 {
 	exit($i_message['install_lock']);
 }
-if (!is_readable($installfile))
+if(!is_readable($installfile))
 {
 	exit($i_message['install_dbFile_error']);
 }
@@ -33,7 +33,7 @@ $msg = $alert = $link = $sql = $allownext = '';
 
 $PHP_SELF = addslashes(htmlspecialchars($_SERVER['PHP_SELF'] ? $_SERVER['PHP_SELF'] : $_SERVER['SCRIPT_NAME']));
 set_magic_quotes_runtime(0);
-if (!get_magic_quotes_gpc())
+if(!get_magic_quotes_gpc())
 {
 	addS($_POST);
 	addS($_GET);
@@ -94,6 +94,7 @@ $dirarray = array (
 	'data',
 	'_runtime',
 	'install',
+	'config',
 );
 $writeable = array();
 foreach ($dirarray as $key => $dir)
@@ -117,7 +118,7 @@ foreach ($dirarray as $key => $dir)
 <p>
 <?php
 echo PHP_VERSION;
-if (PHP_VERSION < '5.1.2')
+if (PHP_VERSION < '5.2.0')
 {
 	result(0, 1);
 	$quit = TRUE;
@@ -127,6 +128,38 @@ else
 	result(1, 1);
 }
 ?></p>
+<h5><?php echo $i_message['php_memory'];?></h5>
+<p>
+<?php
+echo $i_message['support'],'/',@ini_get('memory_limit');
+if ((int)@ini_get('memory_limit') < (int)'16M')
+{
+	echo '<span class="red">'.$i_message['php_memory_error'].'</span>';
+	result(0, 1);
+	$quit = TRUE;
+}
+else
+{
+	result(1, 1);
+}
+?></p>
+
+<h5><?php echo $i_message['php_session'];?></h5>
+<p>
+<?php
+$session_path = @ini_get('session.save_path');
+if(!isset($_SESSION['thinksns_install'])){
+	echo '<span class="red">'.$i_message['php_session_error'].': '.$session_path.'</span>';
+	result(0, 1);
+	$quit = TRUE;
+}
+else
+{
+	echo $i_message['support'];
+	result(1, 1);
+}
+?></p>
+
 <h5><?php echo $i_message['file_upload'];?></h5>
 <p>
 <?php
@@ -226,7 +259,7 @@ foreach ($writeable as $value)
 	echo '<p>'.$value.'</p>';
 }
 
-if (is_writable(THINKSNS_ROOT.$thinksns_config_file))
+if (is_writable(THINKSNS_ROOT.'/config/'.$thinksns_config_file))
 {
 	echo '<p>'.$thinksns_config_file.result(1, 0).'</p>';
 }
@@ -236,7 +269,7 @@ else
 	$quit = TRUE;
 }
 ?>
-<!-- <span class='red'><?php echo $i_message['install_dirmod'];?></span> -->
+
 </div>
 <p class="center">
 	<form method="post" action='install.php?v=3'>
@@ -264,7 +297,7 @@ elseif ($v == '3')
 <p><input type="password" name="db_password" value="" size="40" class='input' /></p>
 
 <h5><?php echo $i_message['install_mysql_name'];?></h5>
-<p><input type="text" name="db_name" value="thinksns_2_8" size="40" class='input' />
+<p><input type="text" name="db_name" value="thinksns_3_0" size="40" class='input' />
 </p>
 
 <h5><?php echo $i_message['install_mysql_prefix'];?></h5>
@@ -287,10 +320,10 @@ elseif ($v == '3')
 <p><input type="text" name="email" value="admin@admin.com" size="40" class='input' /></p>
 
 <h5><?php echo $i_message['install_founder_password'];?></h5>
-<p><input type="text" name="password" value="" size="40" class='input' /></p>
+<p><input type="password" name="password" value="" size="40" class='input' /></p>
 
 <h5><?php echo $i_message['install_founder_rpassword'];?></h5>
-<p><input type="text" name="rpassword" value="" size="40" class='input' /></p>
+<p><input type="password" name="rpassword" value="" size="40" class='input' /></p>
 
 
 </div>
@@ -413,7 +446,7 @@ elseif ($v == '4')
 
 		$default_manager_account	=	array();
 		$default_manager_account['email']		=	$email;
-		$default_manager_account['password']	=	md5($password);
+		$default_manager_account['password']	=	md5(md5($password).'11111');
 
 		$_SESSION['config_file_content']		=	$config_file_content;
 		$_SESSION['default_manager_account']	=	$default_manager_account;
@@ -429,7 +462,8 @@ elseif ($v == '4')
 
 <?php
 //写配置文件
-$fp = fopen(THINKSNS_ROOT.$thinksns_config_file, 'wb');
+$randkey = uniqid(rand());
+$fp = fopen(THINKSNS_ROOT.'/config/'.$thinksns_config_file, 'wb');
 $configfilecontent = <<<EOT
 <?php
 if (!defined('SITE_PATH')) exit();
@@ -437,36 +471,25 @@ if (!defined('SITE_PATH')) exit();
 return array(
 	// 数据库常用配置
 	'DB_TYPE'			=>	'mysql',			// 数据库类型
+
 	'DB_HOST'			=>	'$db_host',			// 数据库服务器地址
 	'DB_NAME'			=>	'$db_name',			// 数据库名
 	'DB_USER'			=>	'$db_username',		// 数据库用户名
 	'DB_PWD'			=>	'$db_password',		// 数据库密码
+
 	'DB_PORT'			=>	3306,				// 数据库端口
 	'DB_PREFIX'			=>	'$db_prefix',		// 数据库表前缀（因为漫游的原因，数据库表前缀必须写在本文件）
 	'DB_CHARSET'		=>	'utf8',				// 数据库编码
-	'DB_FIELDS_CACHE'	=>	true,				// 启用字段缓存
-
-	//'COOKIE_DOMAIN'	=>	'.thinksns.com',	//cookie域,请替换成你自己的域名 以.开头
-
-	//Cookie加密密码
-	'SECURE_CODE'       =>  'SECURE_TEST',
-
-	// 默认应用
-    'DEFAULT_APPS'		=> array('api', 'admin', 'home', 'myop', 'weibo', 'wap', 'w3g'),
-
-    // 是否开启URL Rewrite
-	'URL_ROUTER_ON'		=> false,
-
-    // 是否开启调试模式 (开启AllInOne模式时该配置无效, 将自动置为false)
-	'APP_DEBUG'			=> false,
+	'SECURE_CODE'		=>	'$randkey',	// 数据加密密钥
+	'COOKIE_PREFIX'		=>	'T3_',	// 数据加密密钥
 );
 EOT;
 $configfilecontent = str_replace('SECURE_TEST','SECURE'.rand(10000,20000),$configfilecontent);
-chmod(THINKSNS_ROOT.$thinksns_config_file, 0777);
+chmod(THINKSNS_ROOT.'/config/'.$thinksns_config_file, 0777);
 $result_1	=	fwrite($fp, trim($configfilecontent));
 @fclose($fp);
 
-if($result_1 && file_exists(THINKSNS_ROOT.$thinksns_config_file)){
+if($result_1 && file_exists(THINKSNS_ROOT.'/config/'.$thinksns_config_file)){
 ?>
 	<p><?php echo $i_message['config_log_success']; ?></p>
 <?php
@@ -631,7 +654,7 @@ elseif ($v == '6')
 	//添加管理员
 	$siteFounder	=	$_SESSION['default_manager_account'];
 
-	$sql1	=	"INSERT INTO `{$db_config['db_prefix']}user` (`uid`, `email`, `password`, `uname`, `sex`, `province`, `city`, `location`, `admin_level`, `commend`, `is_active`, `is_init`, `is_synchronizing`, `cTime`, `identity`, `score`,`myop_menu_num`,`api_key`,`domain`) VALUES (".$admin_id.", '".$siteFounder['email']."', '".$siteFounder['password']."', '管理员', '0', '0', '0', NULL, '1', NULL, '1', '1', '0', ".time().", '1', '0', '10', NULL, '');";
+	$sql1 = "INSERT INTO `{$db_config['db_prefix']}user` VALUES (".$admin_id.", '".$siteFounder['email']."', '".$siteFounder['password']."', '11111', '管理员', '".$siteFounder['email']."', '1', '北京市 北京市 海淀区', '1', '1', '1', ".time().", '1', '', '', '110000', '110100', '110108', '127.0.0.1', 'zh-cn', 'PRC', '0', 'G', '', 0, 0, 0, '管理员 guanliyuan', '');";
 
 	if( mysql_query($sql1) ){
 		echo '<p>'.$i_message['create_founderpower_success'].'... <span class="blue">OK</span></p>';
@@ -640,16 +663,8 @@ elseif ($v == '6')
 		$quit	=	true;
 	}
 
-	//将管理员添加到漫游的用户记录
-	$sql_myop	=	"INSERT INTO `{$db_config['db_prefix']}myop_userlog` (`uid`, `action`, `type`, `dateline`) VALUES (".$admin_id.", 'add', '0', ".time().");";
-	if( mysql_query($sql_myop) ){
-
-	} else {
-		$quit	=	true;
-	}
-
 	//将管理员加入“管理员”用户组
-	$sql_user_group	=	"INSERT INTO `{$db_config['db_prefix']}user_group_link` (`user_gorup_link_id`,`user_group_id`,`user_group_title`,`uid`) VALUES ('1', '1', '管理员', ".$admin_id.");";
+	$sql_user_group	= "INSERT INTO `{$db_config['db_prefix']}user_group_link` (`id`,`uid`,`user_group_id`) VALUES ('1', ".$admin_id.",'1');";
 	if( mysql_query($sql_user_group) ){
 
 	} else {
@@ -657,12 +672,12 @@ elseif ($v == '6')
 	}
 
 	//将管理员设置为默认关注的用户
-	$sql_auto_friend = "REPLACE INTO `{$db_config['db_prefix']}system_data` (`list`,`key`,`value`) VALUES ('register', 'register_auto_friend', '".serialize($admin_id)."');";
-	if( mysql_query($sql_auto_friend) ){
+	// $sql_auto_friend = "REPLACE INTO `{$db_config['db_prefix']}system_data` (`list`,`key`,`value`) VALUES ('register', 'register_auto_friend', '".serialize($admin_id)."');";
+	// if( mysql_query($sql_auto_friend) ){
 
-	} else {
-		$quit	=	true;
-	}
+	// } else {
+	// 	$quit	=	true;
+	// }
 
 	if(!$quit){
 		//锁定安装

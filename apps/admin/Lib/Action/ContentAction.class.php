@@ -1,657 +1,411 @@
 <?php
-class ContentAction extends AdministratorAction {
+//+----------------------------------------------------------------------
+// | Sociax [ WE CAN DO IT JUST THINK IT ]
+// +----------------------------------------------------------------------
+// | Copyright (c) 2012 http://www.thinksns.com All rights reserved.
+// +----------------------------------------------------------------------
+// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
+// +----------------------------------------------------------------------
+// | Author: jason <yangjs17@yeah.net>
+// +----------------------------------------------------------------------
+// 
 
-	private function __isValidRequest($field, $array = 'post') {
-		$field = is_array($field) ? $field : explode(',', $field);
-		$array = $array == 'post' ? $_POST : $_GET;
-		foreach ($field as $v){
-			$v = trim($v);
-			if ( !isset($array[$v]) || $array[$v] == '' ) return false;
+/**
+ +------------------------------------------------------------------------------
+ * 内容管理
+ +------------------------------------------------------------------------------
+ *                            
+ * @author    jason <yangjs17@yeah.net> 
+ * @version   1.0
+ +------------------------------------------------------------------------------
+ */
+tsload(APPS_PATH.'/admin/Lib/Action/AdministratorAction.class.php');
+
+class ContentAction extends AdministratorAction
+{
+	public $pageTitle = array();
+	//TODO  要移位置
+	public $from = array(0=>'网站',1=>'手机网页版',2=>'android',3=>'iphone');
+	
+	public function feed($isRec = 0, $is_audit = 1){
+		//搜索区别
+		$_POST['rec'] = $isRec = isset($_REQUEST['rec']) ? t($_REQUEST['rec']) : $isRec;
+		if(!$isRec){
+			$_POST['is_audit'] = $isRec = isset($_REQUEST['is_audit']) ? t($_REQUEST['is_audit']) : $isRec;
 		}
-		return true;
-	}
-
-	/** 内容管理 - 广告管理 **/
-
-	public function ad() {
-		$data = M('ad')->order('`display_order` ASC,`ad_id` ASC')->findAll();
-		$this->assign('ad', $data);
-		$this->assign('place_array', array('中部','头部','左下','右下','底部','右上'));
-		$this->display();
-	}
-
-	public function addAd() {
-		$this->assign('type', 'add');
-		$this->display('editAd');
-	}
-
-	public function editAd() {
-		$map['ad_id'] = intval($_GET['id']);
-		$ad = M('ad')->where($map)->find();
-		//$this->assign('ad',$ad);
-
-		$ad_content = unserialize($ad['content']);
-		if($ad_content){
-			$ad['content'] = $ad_content;
-			 $ad['type_id'] =3;
-			
-		} else{
-			$ad['type_id'] =2;
-		 }
-		if(empty($ad))
-			$this->error('参数错误');
-			$this->assign('banner',$ad['content']);
-			$this->assign($ad);
-			$this->assign('type', 'edit');
-			$this->display('editAd');
-	}
-
-//编辑广告
-	public function updataAd(){
-		$map['ad_id'] = intval($_GET['id']);
-		$ad = M('ad')->where($map)->find();
-		$this->assign('ad',$ad);
-
-		$ad_content = unserialize($ad['content']);
-		if($ad_content){
-			$ad['content'] = $ad_content;
-		}
-		if(empty($ad))
-			$this->error('参数错误');
-			$this->assign('banner',$ad['content']);
-			$this->assign($ad);
-			$this->assign('type', 'edit');
-			$this->display('updataAd');
-	}
-	public function doEditAd() {
-		$count = count($_POST['banner']);	
-		$_POST['display_type'] == intval($_POST['display_type']);
-		if( ($_POST['ad_id'] = intval($_POST['ad_id'])) <= 0 )
-			unset($_POST['ad_id']);
-		// 格式化数据
-		$_POST['title']			= h(t($_POST['title']));
-		// $bannerUrl = $_POST['bannerUrl'];
-		// $bannerUrl = serialize($bannerUrl);
-
-		$file = X('Xattach')->upload($attach_type='banner');
-		if($file['status'] == false){
-			$_POST['content'] = $_POST['content'];
-			if(empty($_POST['content'])){
-				$_POST['content']	=$_POST['hide'];
-			}
-		}else{
-			foreach ($_POST['bannerUrl'] as $v) {
-				if(empty($v)){
-					$this->assign('jumpUrl', U('admin/Content/addAd'));
-					$this->error('URL不能为空！');
-				}
-			}
-			foreach ($file['info'] as $k=>$v) {
-				$url[$k]['img'] = SITE_URL.'/data/uploads/'.$v['savepath'].$v['savename'];
-				$url[$k]['url'] = $_POST['bannerUrl'][$k];
-			}
+		 
+		$this->pageKeyList = array('feed_id','uid','uname','data','publish_time','type','from','DOACTION');
+		$this->searchKey = array('feed_id','uid','type','rec');
+		$this->opt['type'] = array('0'=>L('PUBLIC_ALL_STREAM'),'post'=>L('PUBLIC_ORDINARY_WEIBO'),'repost'=>L('PUBLIC_SHARE_WEIBO'),'postimage'=>L('PUBLIC_PICTURE_WEIBO'),'postfile'=>L('PUBLIC_ATTACHMENT_WEIBO'));	//TODO 临时写死
 		
-			foreach ($_POST['bannerOld'] as $key => $value) {
-				$url[] = array('img'=>$value,
-							  'url'=>$_POST['bannerUrlOld'][$key]);
-			}
-			$url = serialize($url);
-			$_POST['content'] = $url;
-		}
-		$_POST['place']			= intval($_POST['place']);
-		$_POST['is_active']		= intval($_POST['is_active'])   == 0 ? '0' : '1';
-		$_POST['is_closable']	= 0; // intval($_POST['is_closable']) == 0 ? '0' : '1';
-		$_POST['mtime']			= time();
-		if ( !isset($_POST['ad_id']) )
-			$_POST['ctime']		= time();
-
-		// 数据检查
-		if(empty($_POST['title']))
-			$this->error('标题不能为空');
-		if($_POST['place'] < 0 || $_POST['place'] > 5)
-			$this->error('参数错误');
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = isset($_POST['ad_id']) ? '3' : '1';
-		$data[] = '内容 - 广告管理 ';
-		isset($_POST['ad_id']) && $data[] =  M('ad')->where( array( 'ad_id'=>intval($_POST['ad_id']) ) )->find();
-		if ( isset($_POST['ad_id']) ) unset( $data['1']['ctime'] );
-		unset( $data['1']['display_order'] );
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		$data[] = $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		// 提交数据
-		$res = isset($_POST['ad_id']) ? M('ad')->save($_POST) : M('ad')->add($_POST);
-
-		//编辑控制
-		$aid = $_GET['id'];
-		$editdata = M( 'ad' )->where( 'ad_id='.$aid )->find();
-		$this->assign('editdata',$editdata);
-
-		if($res) {
-			if( !isset($_POST['ad_id']) ) {
-				// 为排序方便, 新建完毕后, 将display_order设置为ad_id
-				M('ad')->where("`ad_id`=$res")->setField('display_order', $res);
-				$this->assign('jumpUrl', U('admin/Content/addAd'));
-			}else {
-				$this->assign('jumpUrl', U('admin/Content/ad'));
-			}
-			F('_action_ad',null);	//删除广告缓存
-			$this->success('保存成功');
-		}else {
-			$this->error('保存失败');
-		}
-	}
-
-	public function doDeleteAd() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
-		}
-		$map['ad_id'] = array('in', t($_POST['ids']));
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 广告管理 ';
-		$data[] =  M('ad')->where( $map )->findall();
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo M('ad')->where($map)->delete() ? '1' : '0';
-		F('_action_ad',null);	//删除广告缓存
-	}
-
-	public function deleteBanner(){
-		echo "1";
-	}
-	public function doAdOrder() {
-		$_POST['ad_id']  = intval($_POST['ad_id']);
-		$_POST['baseid'] = intval($_POST['baseid']);
-		if ( $_POST['ad_id'] <= 0 || $_POST['baseid'] <= 0 ) {
-			echo 0;
-			exit;
-		}
-
-		// 获取详情
-		$map['ad_id'] = array('in', array($_POST['ad_id'], $_POST['baseid']));
-		$res = M('ad')->where($map)->field('ad_id,display_order')->findAll();
-		if ( count($res) < 2 ) {
-			echo 0;
-			exit;
-		}
-
-		//转为结果集为array('id'=>'order')的格式
-    	foreach($res as $v) {
-    		$order[$v['ad_id']] = intval($v['display_order']);
-    	}
-    	unset($res);
-
-    	//交换order值
-    	$res = 		   M('ad')->where('`ad_id`=' . $_POST['ad_id'])->setField(  'display_order', $order[$_POST['baseid']] );
-    	$res = $res && M('ad')->where('`ad_id`=' . $_POST['baseid'])->setField( 'display_order', $order[$_POST['ad_id']]  );
-
-    	F('_action_ad',null);	//删除广告缓存
-
-    	if($res) echo 1;
-    	else	 echo 0;
-	}
-
-	/** 内容管理 - 表情管理 **/
-
-	public function expression() {
-		$expression = model('Expression')->getExpressionByMap();
-		$this->assign('data', $expression);
-		$this->display();
-	}
-
-	public function addExpression() {
-		$this->assign('type', 'add');
-		$this->display('editExpression');
-	}
-
-	public function doAddExpression() {
-		if (!$this->__isValidRequest('title,type,emotion,filename')) {
-			$this->error('数据不完整');
-		}
-
-        $_POST = array_map('t',$_POST);
-
-        $_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '1';
-		$data[] = '内容 - 表情管理 ';
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		$data[] =  $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		$res = model('Expression')->add($_POST);
-		if ($res) $this->success('保存成功');
-		else	  $this->error('保存失败');
-	}
-
-	public function editExpression() {
-		$map['expression_id']  = intval($_GET['expression_id']);
-		$expression = model('Expression')->getExpressionByMap($map);
-		$this->assign('expression', $expression[0]);
-		$this->assign('type', 'edit');
-		$this->display();
-	}
-
-	public function doEditExpression() {
-		if (!$this->__isValidRequest('expression_id,title,type,emotion,filename')) {
-			$this->error('数据不完整');
-		}
-
-        $_POST = array_map('t',$_POST);
-
-        $_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '3';
-		$data[] = '内容 - 表情管理 ';
-		$data[] = model('Expression')->getExpressionByMap( array('expression_id'=>intval($_REQUEST['expression_id'])) );
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		$_POST['filepath'] = SITE_URL.'/public/themes/weibo/images/expression/'.$_POST['type'].'/'.$_POST['filename'];
-		$data[] =  $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		$res = model('Expression')->save($_POST);
-		if ($res) {
-			$this->assign('jumpUrl', U('admin/Content/expression'));
-			$this->success('保存成功');
+		$this->pageTab[] = array('title'=>L('PUBLIC_DYNAMIC_MANAGEMENT'),'tabHash'=>'list','url'=>U('admin/Content/feed'));
+		$this->pageTab[] = array('title'=>'待审列表','tabHash'=>'unAudit','url'=>U('admin/Content/feedUnAudit'));
+		$this->pageTab[] = array('title'=>L('PUBLIC_RECYCLE_BIN'),'tabHash'=>'rec','url'=>U('admin/Content/feedRec'));
+		
+		$this->pageButton[] = array('title'=>L('PUBLIC_DYNAMIC_SEARCH'),'onclick'=>"admin.fold('search_form')");
+		if($isRec == 0 && $is_audit == 1){
+			$this->pageButton[] = array('title'=>L('PUBLIC_DYNAMIC_DELETE'),'onclick'=>"admin.ContentEdit('','delFeed','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_DYNAMIC')."')");
+		}else if($is_Rec==0 && $is_audit == 0){
+			$this->pageButton[] = array('title'=>'通过','onclick'=>"admin.ContentEdit('','auditFeed','".'通过'."','".L('PUBLIC_DYNAMIC')."')");
+			$this->pageButton[] = array('title'=>'删除','onclick'=>"admin.ContentEdit('','delFeed','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_DYNAMIC')."')");
 		}else{
-			$this->error('保存失败');
+			$this->pageButton[] = array('title'=>L('PUBLIC_REMOVE_COMPLETELY'),'onclick'=>"admin.ContentEdit('','deleteFeed','".L('PUBLIC_REMOVE_COMPLETELY')."','".L('PUBLIC_DYNAMIC')."')");
 		}
-	}
-
-	public function doDeleteExpression() {
-		$map['expression_id'] = array('in', t($_POST['expression_id']));
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 表情管理 ';
-		$data[] = model('Expression')->getExpressionByMap( array('expression_id'=>intval($_POST['expression_id'])) );
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		$res	   = model('Expression')->where($map)->delete();
-    	if($res) {echo 1; }
-    	else 	 {echo 0; }
-	}
-
-	/** 内容 - 模板管理 */
-
-	//模板管理
-	public function template() {
-		$list   = model('Template')->getTemplate();
-		$this->assign($list);
-		$action = isset($_GET['action']) ? $_GET['action'] : 'list';
-		$this->assign('action', $action);
-		$this->display();
-	}
-
-	public function addTemplate() {
-		$this->assign('type', 'add');
-		$this->display('editTemplate');
-	}
-
-	public function doAddTemplate() {
-		if (! $this->__isValidRequest('name')) $this->error('资料不完整');
-
-        $_POST = array_map('t',$_POST);
-        $_POST = array_map('h',$_POST);
-
-		$_POST['is_cache'] = intval($_POST['is_cache']);
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '1';
-		$data[] = '内容 - 模板管理 ';
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		unset( $_POST['tpl_id'] );
-		$data[] = $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		$res = model('Template')->addTemplate($_POST);
-		if ($res) {
-			$this->success('保存成功');
-		}else {
-			$this->error('保存失败');
+		
+		$isRec == 1 &&  $_REQUEST['tabHash'] = 'rec';
+		$is_audit == 0 && $_REQUEST['tabHash'] = 'unAudit';
+		$this->assign('pageTitle',$isRec ? L('PUBLIC_RECYCLE_BIN'):L('PUBLIC_DYNAMIC_MANAGEMENT'));
+		$map['is_del'] = $isRec==1 ? 1 :0; 
+		if(!$isRec){
+			$map['is_audit'] = $is_audit==1 ? 1 :0; 
 		}
-	}
+		!empty($_POST['feed_id']) && $map['feed_id'] = array('in',explode(',',$_POST['feed_id']));
+		!empty($_POST['uid']) && $map['uid'] = array('in',explode(',',$_POST['uid']));
+		!empty($_POST['type']) && $map['type'] = t($_POST['type']);
 
-	public function editTemplate() {
-		$tid = intval($_GET['tid']);
-		$dao = model('Template');
-		$template = M('template')->where("`tpl_id` = $tid")->find();
-		if (!$template) $this->error('无此模板');
 
-		$this->assign('template', $template);
-		$this->assign('type', 'edit');
-		$this->display();
-	}
-
-	public function doEditTemplate() {
-		if (! $this->__isValidRequest('tpl_id, name')) $this->error('资料不完整');
-
-        $_POST = array_map('t',$_POST);
-        $_POST = array_map('h',$_POST);
-
-		$_POST['tpl_id']   = intval($_POST['tpl_id']);
-		$_POST['is_cache'] = intval($_POST['is_cache']);
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '3';
-		$data[] = '内容 - 模板管理 ';
-		$tid = intval($_REQUEST['tpl_id']);
-		$data[] = M('template')->where("`tpl_id` = $tid")->find();
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		$_POST['ctime'] = time();
-		$data[] = $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		$res = model('Template')->save($_POST);
-		if ($res) {
-			$this->assign('jumpUrl', U('admin/Content/template'));
-			$this->success('保存成功');
-		}else {
-			$this->error('保存失败');
-		}
-	}
-
-	public function doDeleteTemplate() {
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 模板管理 ';
-		$tid = intval(t($_POST['ids']));
-		$data[] = M('template')->where("`tpl_id` = $tid")->find();
-		if( $_POST['__hash__'] )unset( $_POST['__hash__'] );
-		$data[] = $_POST;
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-    	echo  model('Template')->deleteTemplate( t($_POST['ids']) ) ? '1' : '0';
-	}
-
-	/** 内容 - 附件管理 */
-
-	public function attach($map) {
-		$dao = model('Attach');
-		$attaches   = $dao->getAttachByMap($map);
-		$extensions = $dao->enumerateExtension();
-		$this->assign($attaches);
-		$this->assign('extensions', $extensions);
-
-		$this->assign($_POST);
-		$this->assign('isSearch', empty($map)?'0':'1');
-		$this->display('attach');
-	}
-
-	public function doSearchAttach() {
-        // 安全过滤
-        $_POST = array_map('t',$_POST);
-
-		$map = $this->_getSearchMap(array('in' => array('id', 'userId', 'extension')));
-		$this->attach($map);
-	}
-
-	public function doDeleteAttach() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
-		}
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 附件管理 ';
-		$map['id'] = array('in',t($_POST['ids']));
-		$data[] = model('Attach')->getAttachByMap($map);
-		$data[] = array('isFile'=>intval($_POST['withfile']));
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo model('Attach')->deleteAttach( t($_POST['ids']), intval($_POST['withfile']) ) ? '1' : '0';
-	}
-
-	/** 内容 - 评论管理 */
-	public function comment() {
-    	$_GET['from_app']	= ( $_GET['from_app']  == 'other' ) ? 'other' : 'weibo';
-    	$limit = 20;
-
-    	if ($_GET['from_app'] == 'weibo') {
-	    	if($_GET['recycle'] == 1){
-				$map['isdel'] = 1;
-	    		$this->assign('recycle', $_GET['recycle']);
+		$listData = model('Feed')->getList($map,20);
+		foreach($listData['data'] as &$v){
+			$v['uname']    = $v['user_info']['space_link'];
+			$v['type']	   = $this->opt['type'][$v['type']]; 
+			$v['from']     = $this->from[$v['from']];
+			$v['data']	   = '<div style="width:500px;line-height:22px" model-node="feed_list" class="feed_list">'.$v['body'].'  <a target="_blank" href="'.U('public/Profile/feed',array('feed_id'=>$v['feed_id'],'uid'=>$v['uid'])).'">'.L('PUBLIC_VIEW_DETAIL').'&raquo;</a></div>';
+			$v['publish_time'] = date('Y-m-d H:i:s',$v['publish_time']);
+			//$v['DOACTION'] = $isRec==0 ? "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"delFeed\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>"
+			//							:"<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"feedRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_RECOVER')."</a>";
+			if($isRec == 0 && $is_audit == 1){
+				$v['DOACTION'] = "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"delFeed\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>";
+			}else if($isRec==0 && $is_audit == 0){
+				$v['DOACTION'] = "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"auditFeed\",\"".'通过'."\",\"".L('PUBLIC_DYNAMIC')."\")'>".'通过'."</a>&nbsp;|&nbsp;"."<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"delFeed\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>";;
 			}else{
-				$map['isdel'] = 0;
-			}
-	    	$data = M('weibo_comment')->order('comment_id DESC')->where($map)->findPage($limit);
-    	}else {
-    		$data = M('comment')->order('id DESC')->findPage($limit);
-    	}
-	    $this->assign( $this->__formatComment($_GET['from_app'], $data) );
-	    $this->assign('from_app', $_GET['from_app']);
-    	$this->display();
-	}
-
-	private function __formatComment($from_app, $data) {
-		foreach($data['data'] as $k => $v) {
-			if ($from_app == 'weibo') {
-				unset($data['data'][$k]);
-				$data['data'][$k]	=  array(
-					'comment_id'	=> $v['comment_id'],
-					'type'			=> 'weibo',
-					'content'		=> $v['content'],
-					'uid'			=> $v['uid'],
-					'to_uid'		=> $v['reply_uid'],
-					'url'			=> U('home/Space/detail',array('id'=>$v['weibo_id'])),
-					'ctime'			=> $v['ctime'],
-					'comment_ip'	=>$v['comment_ip'],
-				);
-			}else if ($from_app == 'other') {
-				unset($data['data'][$k]);
-				$v['data'] = unserialize($v['data']);
-				$data['data'][$k]	=  array(
-					'comment_id'	=> $v['id'],
-					'type'			=> $v['type'],
-					'content'		=> $v['comment'],
-					'uid'			=> $v['uid'],
-					'to_uid'		=> $v['to_uid'],
-					'url'			=> $v['data']['url'],
-					'ctime'			=> $v['cTime'],
-					'comment_ip'	=>$v['comment_ip'],
-				);
+				$v['DOACTION'] = "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['feed_id']},\"feedRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_RECOVER')."</a>";
 			}
 		}
-		return $data;
+		$this->_listpk = 'feed_id';
+		$this->displayList($listData);
 	}
 
-	public function doDeleteComment() {
-		$_POST['from_app']	= $_POST['from_app'] == 'other' ? 'other' : 'weibo';
-		$_POST['ids']		= explode(',', t($_POST['ids']));
-
-        if ( empty($_POST['ids']) )
-       		return ;
-
-       	if ($_POST['from_app'] == 'weibo') {
-       		$dao = D('Comment', 'weibo');
-       		$comments = array();
-
-       		$map['comment_id'] = array('in', $_POST['ids']);
-       		$res = $dao->where($map)->field('comment_id,uid')->findAll();
-
-       		$_LOG['uid'] = $this->mid;
-			$_LOG['type'] = '2';
-			$data[] = '内容 - 评论管理  - 微博';
-			$data[] = $dao->where($map)->findAll();
-			$_LOG['data'] = serialize($data);
-			$_LOG['ctime'] = time();
-			M('AdminLog')->add($_LOG);
-
-       		// 转换成 array('uid'=>$comment) 的形式
-       		foreach ($res as $v)
-       			$comments[$v['uid']][] = $v['comment_id'];
-
-       		// 循环批量删除
-       		foreach ($comments as $uid => $ids)
-       			$dao->deleteMuleComments($ids, $uid);
-
-			unset($res);
-       		echo 1;
-
-       	}else if ($_POST['from_app'] == 'other') {
-
-       		$_LOG['uid'] = $this->mid;
-			$_LOG['type'] = '2';
-			$data[] = '内容 - 评论管理  - 其它应用';
-			$map['id'] = array('in',$_POST['ids']);
-			$data[] = model('GlobalComment')->where($map)->findall();
-			$_LOG['data'] = serialize($data);
-			$_LOG['ctime'] = time();
-			M('AdminLog')->add($_LOG);
-
-       		echo model('GlobalComment')->deleteComment($_POST['ids']) ? '1' : '0';
-
-       	}else {
-       		echo 0;
-       	}
+	//待审列表
+	public function feedUnAudit(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_feed';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->feed(0 , 0);
 	}
 
-	/** 内容 - 短消息管理 */
-
-	public function message($map) {
-		$msg = model('Message')->getMessageByMap($map);
-		$this->assign($msg);
-
-		$this->assign($_POST);
-		$this->assign('isSearch', empty($map)?'0':'1');
-		$this->display('message');
+	//回收站
+	public function feedRec(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_feed';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->feed(1);
 	}
-
-	public function doSearchMessage() {
-        // 安全过滤
-        $_POST = array_map('t',$_POST);
-
-		// 标题模糊查询
-    	if ( isset($_POST['content']) && $_POST['content'] != '' ) {
-    		$_POST['content']	= '%' . $_POST['content'] . '%';
-    	}
-    	$map = $this->_getSearchMap( array('in'=>array('message_id','from_uid'), 'like'=>array('content')) );
-    	$this->message($map);
-	}
-
-	public function doDeleteMessage() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
+	//恢复
+	public function feedRecover(){
+		
+		$return =  model('Feed')->doEditFeed($_POST['id'],'feedRecover',L('PUBLIC_RECOVER'));
+		if($return['status'] == 0){
+			$return['data'] = L('PUBLIC_RECOVERY_FAILED');
+		}else{
+			$return['data'] = L('PUBLIC_RECOVERY_SUCCESS');	
 		}
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 短消息管理';
-		$map['message_id'] = array('in',t($_POST['ids']));
-		$data[] = model('Message')->getMessageByMap($map);
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo model('Message')->deleteSessionByAdmin(t($_POST['ids'])) ? '1' : '0';
+		echo json_encode($return);exit();
+		
 	}
+	//微博通过审核
+	public function auditFeed(){
 
-	/** 内容 - 通知管理 */
-
-	public function notify($map) {
-		$dao    = service('Notify');
-		$notify = $dao->get($map,20,false);
-		$types  = $dao->enumerateType();
-		$this->assign($notify);
-		$this->assign('types', $types);
-
-		$this->assign($_POST);
-		$this->assign('isSearch', empty($map)?'0':'1');
-		$this->display('notify');
-	}
-
-	public function doSearchNotify() {
-        // 安全过滤
-        $_POST = array_map('t',$_POST);
-
-		$map = $this->_getSearchMap(array('in' => array('notify_id', 'from', 'receive', 'type')));
-		$this->notify($map);
-	}
-
-	public function doDeleteNotify() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
+		$return =  model('Feed')->doAuditFeed($_POST['id']);
+		if($return['status'] == 0){
+			$return['data'] = L('PUBLIC_ADMIN_OPRETING_ERROR');
+		}else{
+			$return['data'] = L('PUBLIC_ADMIN_OPRETING_SUCCESS');	
 		}
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 通知管理';
-		$map['notify_id'] = array('in',$_POST['ids']);
-		$data[] = M('Notify')->where($map)->findall();
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo service('Notify')->deleteNotify( t($_POST['ids']) ) ? '1' : '0';
+		echo json_encode($return);exit();
 	}
-
-	/** 内容 - 动态管理 */
-
-	public function feed($map) {
-		$dao   = service('Feed');
-		$feed  = $dao->getFeedByMap($map);
-		$types = $dao->enumerateType();
-		$this->assign($feed);
-		$this->assign('types', $types);
-
-		$this->assign($_POST);
-		$this->assign('isSearch', empty($map)?'0':'1');
-		$this->display('feed');
-	}
-
-	public function doSearchFeed() {
-        // 安全过滤
-        $_POST = array_map('t',$_POST);
-
-		$map = $this->_getSearchMap(array('in'=>array('feed_id','uid','type')));
-		$this->feed($map);
-	}
-
-	public function doDeleteFeed() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
+	//假删除 
+	public function delFeed(){
+		
+		$return =  model('Feed')->doEditFeed($_POST['id'],'delFeed',L('PUBLIC_STREAM_DELETE'));
+		if($return['status'] == 0){
+			$return['data'] = L('PUBLIC_DELETE_FAIL');
+		}else{
+			$return['data'] = L('PUBLIC_DELETE_SUCCESS');	
 		}
-
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '2';
-		$data[] = '内容 - 动态管理';
-		$map['feed_id'] = array('in',$_POST['ids']);
-		$data[] = M ( 'feed' )->where($map)->findall();
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo service('Feed')->deleteFeed( t($_POST['ids']) ) ? '1' : '0';
+		echo json_encode($return);exit();
 	}
+	//真删除 
+	public function deleteFeed(){
+		$return =  model('Feed')->doEditFeed($_POST['id'],'deleteFeed',L('PUBLIC_REMOVE_COMPLETELY'));
+		if($return['status'] == 0){
+			$return['data'] = L('PUBLIC_REMOVE_COMPLETELY_FAIL');
+		}else{
+			$return['data'] = L('PUBLIC_REMOVE_COMPLETELY_SUCCESS');	
+		}
+		echo json_encode($return);exit();
+		
+	}
+	
+	/**
+	 * 评论管理
+	 * @param boolean $isRec 是否是回收站列表
+	 * @return array 相关数据
+	 */
+	public function comment($isRec = false, $is_audit = 1)
+	{
+		// 搜索区别
+		$_POST['rec'] = $isRec = isset($_REQUEST['rec']) ? t($_REQUEST['rec']) : $isRec;
+		 
+		$this->pageKeyList = array('comment_id','uid','app_uid','source_type','content','ctime','client_type','DOACTION');
+		$this->searchKey = array('comment_id','uid','app_uid');
+		
+		$this->pageTab[] = array('title'=>'评论管理','tabHash'=>'list','url'=>U('admin/Content/comment'));
+		$this->pageTab[] = array('title'=>'待审评论列表','tabHash'=>'unAudit','url'=>U('admin/Content/commentUnAudit'));
+		$this->pageTab[] = array('title'=>L('PUBLIC_RECYCLE_BIN'),'tabHash'=>'rec','url'=>U('admin/Content/commentRec'));
+		
+		$this->pageButton[] = array('title'=>L('PUBLIC_SEARCH_COMMENT'),'onclick'=>"admin.fold('search_form')");
+		if($isRec == 0 && $is_audit == 1){
+			$this->pageButton[] = array('title'=>L('PUBLIC_DELETE_COMMENT'),'onclick'=>"admin.ContentEdit('','delComment','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_STREAM_COMMENT')."')");
+		}else if($is_Rec==0 && $is_audit == 0){
+			$this->pageButton[] = array('title'=>'通过','onclick'=>"admin.ContentEdit('','auditComment','".'通过'."','".L('PUBLIC_DYNAMIC')."')");
+			$this->pageButton[] = array('title'=>'删除','onclick'=>"admin.ContentEdit('','delComment','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_DYNAMIC')."')");
+		}else{
+			$this->pageButton[] = array('title'=>L('PUBLIC_REMOVE_COMPLETELY'),'onclick'=>"admin.ContentEdit('','deleteComment','".L('PUBLIC_REMOVE_COMPLETELY')."','".L('PUBLIC_STREAM_COMMENT')."')");
+		}
+		
+		$isRec == 1 &&  $_REQUEST['tabHash'] = 'rec';
+		$is_audit == 0 && $_REQUEST['tabHash'] = 'unAudit';
+		$this->assign('pageTitle',$isRec ? L('PUBLIC_RECYCLE_BIN'):'评论管理');
+		$map['is_del'] = $isRec==1 ? 1 :0; 
+		if(!$isRec){
+			$map['is_audit'] = $is_audit==1 ? 1 :0; 
+		}
+		!empty($_POST['comment_id']) && $map['comment_id'] = array('in',explode(',',$_POST['comment_id']));
+		!empty($_POST['uid']) && $map['uid'] = array('in',explode(',',$_POST['uid']));
+		!empty($_POST['app_uid']) && $map['app_uid'] = array('in',explode(',',$_POST['app_uid']));
+		$listData = model('Comment')->getCommentList($map,'comment_id desc',20);
+
+		foreach($listData['data'] as &$v){
+			
+			$v['uid']			  = $v['user_info']['space_link']; 
+			$v['app_uid']		  = $v['sourceInfo']['source_user_info']['space_link'];	
+			$v['source_type']	  = "<a href='{$v['sourceInfo']['source_url']}' target='_blank'>".$v['sourceInfo']['source_type']."</a>";
+			$v['content']		  = '<div style="width:400px">'.$v['content'].'</div>';	
+			$v['client_type']     = $this->from[$v['client_type']];
+			$v['ctime']    = date('Y-m-d H:i:s',$v['ctime']);
+			$v['DOACTION'] = $isRec==0 ? "<a href='".$v['sourceInfo']['source_url']."' target='_blank'>".L('PUBLIC_VIEW')."</a> <a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"delComment\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_STREAM_COMMENT')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>"
+										:"<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"CommentRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_STREAM_COMMENT')."\")'>".L('PUBLIC_RECOVER')."</a>";
+			if($isRec == 0 && $is_audit == 1){
+				$v['DOACTION'] = "<a href='".$v['sourceInfo']['source_url']."' target='_blank'>".L('PUBLIC_VIEW')."</a> <a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"delComment\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_STREAM_COMMENT')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>";
+			}else if($isRec==0 && $is_audit == 0){
+				$v['DOACTION'] = "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"auditComment\",\"".'通过'."\",\"".L('PUBLIC_STREAM_COMMENT')."\")'>".'通过'."</a>&nbsp;|&nbsp;"."<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"delComment\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_DYNAMIC')."\")'>".L('PUBLIC_STREAM_DELETE')."</a>";;
+			}else{
+				$v['DOACTION'] = "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['comment_id']},\"CommentRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_STREAM_COMMENT')."\")'>".L('PUBLIC_RECOVER')."</a>";
+			}
+		}
+		$this->_listpk = 'comment_id';
+		$this->displayList($listData);
+	}
+
+	//待审列表
+	public function commentUnAudit(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_comment';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->comment(0 , 0);
+	}
+	
+	//回收站
+	public function commentRec(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_comment';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->comment(1);
+	}
+
+	//恢复
+	public function commentRecover()
+	{
+		echo json_encode(model('Comment')->doEditComment($_POST['id'],'commentRecover','恢复成功'));
+	}
+
+	//评论通过审核
+	public function auditComment(){
+
+		$return =  model('Comment')->doAuditComment($_POST['id']);
+		if($return['status'] == 0){
+			$return['data'] = L('PUBLIC_ADMIN_OPRETING_ERROR');
+		}else{
+			$return['data'] = L('PUBLIC_ADMIN_OPRETING_SUCCESS');	
+		}
+		echo json_encode($return);exit();
+	}
+
+	//假删除 
+	public function delComment(){
+		echo json_encode( model('Comment')->doEditComment($_POST['id'],'delComment','删除成功'));
+	}
+	//真删除 
+	public function deleteComment(){
+		echo json_encode( model('Comment')->doEditComment($_POST['id'],'deleteComment', '评论彻底删除成功'));
+	}
+	
+	/**
+	 * 私信管理列表
+	 * @param integer $isRec [description]
+	 * @return void
+	 */
+	public function message ($isRec = 0) {
+		// 搜索区别
+		$_POST['rec'] = $isRec = isset($_REQUEST['rec']) ? t($_REQUEST['rec']) : $isRec;
+		// 列表字段配置
+		$this->pageKeyList = array('message_id','fuid','from_uid','mix_man','content','mtime','DOACTION');
+		// 搜索字段配置
+		$this->searchKey = array('from_uid','mix_man','content');
+		// Tab标签配置
+		$this->pageTab[] = array('title'=>L('PUBLIC_PRIVATE_MESSAGE_MANAGEMENT'),'tabHash'=>'list','url'=>U('admin/Content/message'));
+		$this->pageTab[] = array('title'=>L('PUBLIC_RECYCLE_BIN'),'tabHash'=>'rec','url'=>U('admin/Content/messageRec'));
+		// 批量操作按钮配置
+		$this->pageButton[] = array('title'=>L('PUBLIC_MASSAGE_SEARCH'),'onclick'=>"admin.fold('search_form')");
+		if($isRec == 0) {
+			$this->pageButton[] = array('title'=>L('PUBLIC_MASSAGE_DEL'),'onclick'=>"admin.ContentEdit('','delMessage','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_PRIVATE_MESSAGE')."');");
+		} else {
+			$this->pageButton[] = array('title'=>L('PUBLIC_REMOVE_COMPLETELY'),'onclick'=>"admin.ContentEdit('','deleteMessage','".L('PUBLIC_REMOVE_COMPLETELY')."','".L('PUBLIC_PRIVATE_MESSAGE')."')");
+		}
+		$isRec == 1 &&  $_REQUEST['tabHash'] = 'rec';
+		$this->assign('pageTitle', $isRec ? L('PUBLIC_RECYCLE_BIN') : L('PUBLIC_PRIVATE_MESSAGE_MANAGEMENT'));
+		// 未删除的 
+		$map['a.is_del'] = ($isRec == 1) ? 1 : 0;	
+		!empty($_POST['from_uid']) && $map['b.from_uid'] = intval($_POST['from_uid']);
+		!empty($_POST['mix_man']) && $map['c.member_uid'] = intval($_POST['mix_man']);
+		!empty($_POST['content']) && $map['a.content'] = array('like','%'.t($_POST['content']).'%');
+		$map['b.type'] = array('neq',3);
+		// 获取列表信息
+		$listData = model('Message')->getDetailList($map);
+		// 整理列表数据
+		foreach ($listData['data'] as &$v) {
+			$uids = explode('_',$v['min_max']);
+			$map = array();
+			$map['uid'] = array('in',$uids);
+			$uname = model('User')->where($map)->getHashList('uid','uname');
+
+			$v['mix_man'] = implode(',',$uname);
+
+			if($v['fuid'] == '1'){
+				$v['fuid'] = L('PUBLIC_SYSTEM');
+			}else{
+				$v['fuid'] = $uname[$v['fuid']];
+			}
+
+			if($v['from_uid'] == '1'){
+				$v['from_uid'] = L('PUBLIC_SYSTEM');
+			}else{
+				$v['from_uid'] = $uname[$v['from_uid']];	
+			}
+			
+			$v['content']  = '<div style="width:500px">'.getShort($v['content'],120,'...').'</div>';// 截取120字
+			$v['mtime']    = date('Y-m-d H:i:s',$v['mtime']);
+			$v['DOACTION'] = $isRec==0 ? "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['message_id']},\"delMessage\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_PRIVATE_MESSAGE')."\");'>".L('PUBLIC_STREAM_DELETE')."</a>"
+										:"<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['message_id']},\"MessageRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_PRIVATE_MESSAGE')."\")'>".L('PUBLIC_RECOVER')."</a>";
+		}
+		// 设置操作主键
+		$this->_listpk = 'message_id';
+		$this->displayList($listData);
+	}
+		
+	//回收站
+	public function messageRec(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_message';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->message(1);
+	}
+	//恢复
+	public function messageRecover(){
+		echo json_encode( model('Message')->doEditMessage($_POST['id'],'messageRecover',L('PUBLIC_RECOVER')));
+	}
+	//假删除 
+	public function delMessage(){
+		echo json_encode( model('Message')->doEditMessage($_POST['id'],'delMessage',L('PUBLIC_STREAM_DELETE')));
+	}
+	//真删除 
+	public function deleteMessage(){
+		echo json_encode( model('Message')->doEditMessage($_POST['id'],'deleteMessage',L('PUBLIC_REMOVE_COMPLETELY')));
+	}
+	
+	
+	public function attach($isRec = 0)
+	{
+		$this->_listpk = 'attach_id';
+		//搜索区别
+		$_POST['rec'] = $isRec = isset($_REQUEST['rec']) ? t($_REQUEST['rec']) : $isRec;
+		 
+		$this->pageKeyList = array('attach_id','name','size','uid','ctime','from','DOACTION');
+		$this->searchKey = array('attach_id','name','from');
+		
+		$this->opt['from'] = array_merge( array('-1'=>L('PUBLIC_ALL_STREAM')), $this->from);
+		$this->pageTab[] = array('title'=>L('PUBLIC_FILE_MANAGEMENT'),'tabHash'=>'list','url'=>U('admin/Content/attach'));
+		$this->pageTab[] = array('title'=>L('PUBLIC_RECYCLE_BIN'),'tabHash'=>'rec','url'=>U('admin/Content/attachRec'));
+		
+		$this->pageButton[] = array('title'=>L('PUBLIC_FILE_STREAM_SEARCH'),'onclick'=>"admin.fold('search_form')");
+		if($isRec == 0){
+			$this->pageButton[] = array('title'=>L('PUBLIC_FILE_STREAM_DEL'),'onclick'=>"admin.ContentEdit('','delAttach','".L('PUBLIC_STREAM_DELETE')."','".L('PUBLIC_FILE_STREAM')."');");
+		}else{
+			$this->pageButton[] = array('title'=>L('PUBLIC_REMOVE_COMPLETELY'),'onclick'=>"admin.ContentEdit('','deleteAttach','".L('PUBLIC_REMOVE_COMPLETELY')."','".L('PUBLIC_FILE_STREAM')."')");
+		}
+		
+		$isRec == 1 &&  $_REQUEST['tabHash'] = 'rec';
+		$this->assign('pageTitle',$isRec ? L('PUBLIC_RECYCLE_BIN'):L('PUBLIC_FILE_MANAGEMENT'));
+		$map['is_del'] = $isRec==1 ? 1:0;	//未删除的 
+		!empty($_POST['attach_id']) && $map['attach_id'] = array('in',explode(',',$_POST['attach_id']));
+		$_POST['from']>1 && $map['from'] = t($_POST['from']);
+		!empty($_POST['name']) && $map['name'] = array('like','%'.t($_POST['name']).'%');
+
+		$listData = model('Attach')->getAttachList($map,'*','attach_id desc',10);
+	
+		
+
+		//$listData = model('Comment')->getCommentList($map,'comment_id desc',20);
+		$image = array('png','jpg','gif','jpeg','bmp');
+
+		foreach($listData['data'] as &$v){
+
+			$user = model('User')->getUserInfo($v['uid']);
+			$v['uid'] 	   = $user['space_link']; 
+			$v['name']	   = in_array($v['extension'],$image) 
+							? '<a href="'.U('widget/Upload/down',array('attach_id'=>$v['attach_id'])).'">'.
+								"<img src='".UPLOAD_URL."/".$v['save_path'].$v['save_name']."' width='100'><br/>{$v['name']}</a>"
+							:'<a href="'.U('widget/Upload/down',array('attach_id'=>$v['attach_id'])).'">'.$v['name'].'</a>';
+			$v['size']	   = byte_format($v['size']);
+			$v['from']     = $this->from[$v['from']];
+			$v['ctime']    = date('Y-m-d H:i:s',$v['ctime']);
+			$v['DOACTION'] = $isRec==0 ? "<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['attach_id']},\"delAttach\",\"".L('PUBLIC_STREAM_DELETE')."\",\"".L('PUBLIC_FILE_STREAM')."\");'>".L('PUBLIC_STREAM_DELETE')."</a>"
+										:"<a href='javascript:void(0)' onclick='admin.ContentEdit({$v['attach_id']},\"AttachRecover\",\"".L('PUBLIC_RECOVER')."\",\"".L('PUBLIC_FILE_STREAM')."\")'>".L('PUBLIC_RECOVER')."</a>";
+		}
+		$this->displayList($listData);
+	}
+		
+	//回收站
+	public function attachRec(){
+		$this->pageKey = APP_NAME.'_'.MODULE_NAME.'_attach';
+        $this->searchPageKey = 'S_'.$this->pageKey ;
+		$this->attach(1);
+	}
+	//恢复
+	public function attachRecover(){
+		echo json_encode( model('Attach')->doEditAttach($_POST['id'],'attachRecover',L('PUBLIC_RECOVER')) );
+	}
+	//假删除 
+	public function delAttach(){
+		echo json_encode( model('Attach')->doEditAttach($_POST['id'],'delAttach',L('PUBLIC_STREAM_DELETE')) );
+	}
+	//真删除 
+	public function deleteAttach(){
+		echo json_encode( model('Attach')->doEditAttach($_POST['id'],'deleteAttach',L('PUBLIC_REMOVE_COMPLETELY')) );
+	}
+	//TODO 临时放着 后面要移动到messagemodel中
+	
+	
 	/**
 	 * 举报管理
 	 */
-	public function denounce($map){
+	public function denounce($map)
+	{
 		$_GET['id'] && $map['id'] = array( 'in',explode( ',', $_GET['id'] ) );
 		$_GET['uid'] && $map['uid'] = array( 'in',explode( ',', $_GET['uid'] ) );
 		$_GET['fuid'] && $map['fuid'] = array( 'in',explode( ',', $_GET['fuid'] ) );
@@ -666,82 +420,342 @@ class ContentAction extends AdministratorAction {
 		$this->display('denounce');
 	}
 
-	public function doDeleteDenounce() {
-		if( empty($_POST['ids']) ) {
+	/**
+	 * 删除举报回收站内容
+	 * @return integer 是否删除成功
+	 */
+	public function doDeleteDenounce()
+	{
+		// 判断参数
+		if(empty($_POST['ids'])) {
 			echo 0;
 			exit ;
 		}
 
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '1';
-		$data[] = '内容 - 举报管理 - 进入回收站';
+		$data[] = L('PUBLIC_CONTENT_REPORT_DELETE');
 		$map['id'] = array('in',t($_POST['ids']));
-		$data[] = model('Denounce')->where($map)->findall();
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
-
-		echo model('Denounce')->deleteDenounce( t($_POST['ids']) ) ? '1' : '0';
+		$data[] = model('Denounce')->where($map)->findAll();
+		// todo 记录日志
+		echo model('Denounce')->deleteDenounce(t($_POST['ids']), intval($_POST['state'])) ? '1' : '0';
 	}
 
-	public function doReviewDenounce(){
-		if( empty($_POST['ids']) ) {
+	/**
+	 * 撤销举报内容
+	 * @return integer 是否撤销成功
+	 */
+	public function doReviewDenounce()
+	{
+		// 判断参数
+		if(empty($_POST['ids'])) {
 			echo 0;
 			exit ;
 		}
 
-		$_LOG['uid'] = $this->mid;
-		$_LOG['type'] = '1';
-		$data[] = '内容 - 举报管理 - 通过审核';
+		$data[] = L('PUBLIC_CONTENT_REPORT_REVOKE');
 		$map['id'] = array('in',t($_POST['ids']));
 		$data[] = model('Denounce')->where($map)->findall();
-		$_LOG['data'] = serialize($data);
-		$_LOG['ctime'] = time();
-		M('AdminLog')->add($_LOG);
+		//todo 记录日志
 		echo model('Denounce')->reviewDenounce( t($_POST['ids']) ) ? '1' : '0';
 	}
+	
+
 	/**
-	 * 后台日志管理
+	 * 话题管理
+	 * @return void
 	 */
-	public function adminLog($map){
-		$data = M( 'AdminLog' )->where($map)->order('ID DESC')->findpage();
-		$this->assign($data);
-		$this->assign($_POST);
-		$this->assign('isSearch', empty($map)?'0':'1');
-		$this->display(adminLog);
+	public function topic(){
+		$this->assign('pageTitle','话题管理');
+		// 设置列表主键
+		$this->_listpk = 'topic_id';
+		$this->pageTab[] = array('title'=>'话题管理','tabHash'=>'list','url'=>U('admin/Content/topic'));
+		$this->pageTab[] = array('title'=>'推荐话题','tabHash'=>'recommendTopic','url'=>U('admin/Content/topic',array('recommend'=>1)));
+		$this->pageTab[] = array('title'=>'添加话题','tabHash'=>'addTopic','url'=>U('admin/Content/addTopic'));
+		$this->pageButton[] = array('title'=>'搜索话题','onclick'=>"admin.fold('search_form')");
+		$this->pageButton[] = array('title'=>'批量屏蔽','onclick'=>"admin.setTopic(3,'',0)");
+		$this->searchKey = array('topic_id','topic_name','recommend','lock');
+		$this->opt['recommend'] = array('0'=>L('PUBLIC_SYSTEMD_NOACCEPT'),'1'=>'是','2'=>'否');
+		$this->opt['essence'] = array('0'=>L('PUBLIC_SYSTEMD_NOACCEPT'),'1'=>'是','2'=>'否');
+		$this->opt['lock'] = array('0'=>L('PUBLIC_SYSTEMD_NOACCEPT'),'1'=>'是','2'=>'否');
+		$this->pageKeyList = array('topic_id','topic_name','note','domain','des','pic','topic_user','outlink','DOACTION');
+		$listData = model('FeedTopicAdmin')->getTopic('',$_GET['recommend']);
+		//dump($listData);exit;
+		$this->displayList($listData);
 	}
 
-	public function showAdminLog(){
-		$map['id'] = $_GET['id'];
-		$data = M('AdminLog')->where($map)->find();
-
-		$this->assign($data);
-		$this->display();
+	/**
+	 * 添加话题
+	 * @return  void
+	 */
+	public function addTopic(){
+		$this->assign('pageTitle','添加话题');
+		$this->pageTab[] = array('title'=>'话题管理','tabHash'=>'list','url'=>U('admin/Content/topic'));
+		$this->pageTab[] = array('title'=>'推荐话题','tabHash'=>'recommendTopic','url'=>U('admin/Content/topic',array('recommend'=>1)));
+		$this->pageTab[] = array('title'=>'添加话题','tabHash'=>'addTopic','url'=>U('admin/Content/addTopic'));
+		$this->pageKeyList = array('topic_name','note','domain','des','pic','topic_user','outlink','recommend');
+		$topic['domain'] = SITE_URL.'/topics/'.'<input type="text" value="" name="domain" id="form_domain">';
+		$this->opt['recommend'] = array('1'=>'是','0'=>'否');
+		//$this->opt['essence'] = array('1'=>'是','0'=>'否');
+		$this->notEmpty = array('topic_name','note');
+		// 表单URL设置
+		$this->savePostUrl = U('admin/Content/doAddTopic');
+		$this->onsubmit = 'admin.topicCheck(this)';
+		$this->onload[] = "$('#search_uids').val('');";
+		$this->displayConfig($topic);
 	}
 
-	public function doSearchAdminLog(){
-		if(!$_POST['type'])
-			unset($_POST['type']);
-		// 安全过滤
-        $_POST = array_map('t',$_POST);
-
-		$map = $this->_getSearchMap(array('in'=>array('id','uid','type')));
-		$this->assign('type',$_POST['type']);
-		$this->adminLog($map);
-	}
-
-	public function doDeleteAdminLog() {
-		if( empty($_POST['ids']) ) {
-			echo 0;
-			exit ;
+	/**
+	 * 执行添加话题
+	 * @return  void
+	 */
+	public function doAddTopic(){
+		t($_POST['topic_name'])=="" && $this->error('话题名称不能为空');
+		t($_POST['note'])=="" && $this->error('话题注释不能为空');
+		$map['topic_name'] = t($_POST['topic_name']);
+		if(model('FeedTopic')->where($map)->find()) $this->error('此话题已存在');
+		if($_POST['domain']!=""){
+			$map1['domain'] = t($_POST['domain']);
+			if(model('FeedTopic')->where($map1)->find()) $this->error('此话题域名已存在');
 		}
-		$where['id'] = array('in',t($_POST['ids']));
-		echo M( 'AdminLog' )->where( $where )->delete() ? '1' : '0';
+		if(h(t($_POST['outlink'])) != ""){
+			$res = preg_match('/^(?:https?|ftp):\/\/(?:www\.)?(?:[a-zA-Z0-9][a-zA-Z0-9\-]*)/',h($_POST['outlink']));
+			if(!$res) $this->error('外链格式错误');
+		}
+		$res = model('FeedTopicAdmin')->addTopic($_POST);
+		if($res){
+			$this->assign('jumpUrl', U('admin/Content/topic'));
+			$this->success(L('PUBLIC_ADD_SUCCESS'));
+		}else{
+			$this->error($user->getLastError());
+		}
 	}
 
-	public function lookDetail(){
-		$data = M( 'AdminLog' )->where( 'id='.$_POST['ids'] )->find();
-		$this->assign($data);
-		$this->display();
+	/**
+	 * 设置话题为推荐、精华或屏蔽
+	 * @return array 操作成功状态和提示信息 
+	 */
+	public function setTopic(){
+		if(empty($_POST['topic_id'])){
+			$return['status'] = 0;
+			$return['data']   = '';
+			echo json_encode($return);exit();
+		}
+		switch (intval($_POST['type'])) {
+			case '1':
+				$field = 'recommend';
+				break;
+			case '2':
+				$field = 'essence';
+				break;
+			case '3':
+				$field = 'lock';	
+				break;
+		}
+		if(intval($_POST['value']) == 1){
+			$value = 0;
+		}else{
+			$value = 1;
+		}
+		!is_array($_POST['topic_id']) && $_POST['topic_id'] = array($_POST['topic_id']);
+		$map['topic_id'] = array('in',$_POST['topic_id']);
+		$result = model('FeedTopic')->where($map)->setField($field,$value);
+		if(!$result){
+			$return['status'] = 0;
+			$return['data'] = L('PUBLIC_ADMIN_OPRETING_ERROR');
+		}else{
+			$return['status'] = 1;
+			$return['data']   = L('PUBLIC_ADMIN_OPRETING_SUCCESS');
+		}
+		echo json_encode($return);exit();
+	}
+
+	/**
+	 * 编辑话题
+	 * @return  void
+	 */
+	public function editTopic(){
+		$this->assign('pageTitle','编辑话题');
+		$this->pageTab[] = array('title'=>'话题管理','tabHash'=>'list','url'=>U('admin/Content/topic'));
+		$this->pageTab[] = array('title'=>'推荐话题','tabHash'=>'recommendTopic','url'=>U('admin/Content/topic',array('recommend'=>1)));
+		$this->pageTab[] = array('title'=>'添加话题','tabHash'=>'addTopic','url'=>U('admin/Content/addTopic'));
+		$this->pageTab[] = array('title'=>'编辑话题','tabHash'=>'editTopic','url'=>U('admin/Content/editTopic',array('topic_id'=>$_GET['topic_id'],'tabHash'=>'editTopic')));
+		$this->pageKeyList = array('topic_id','topic_name','note','domain','des','pic','topic_user','outlink','recommend');
+		$this->opt['recommend'] = array('1'=>'是','0'=>'否');
+		//$this->opt['essence'] = array('1'=>'是','0'=>'否');
+		$topic = model('FeedTopic')->where('topic_id='.$_GET['topic_id'])->find();
+		if($topic['pic']){
+			$pic = D('attach')->where('attach_id='.$topic['pic'])->find();
+			$pic_url = $pic['save_path'].$pic['save_name'];
+			$topic['pic_url'] = getImageUrl($pic_url); 
+		}
+		$topic['domain'] = SITE_URL.'/topics/'.'<input type="text" value="'.$topic['domain'].'" name="domain" id="form_domain">';
+		$this->notEmpty = array('note');	
+		$this->savePostUrl = U('admin/Content/doEditTopic');
+		$this->onsubmit = 'admin.topicCheck(this)';
+		$this->displayConfig($topic);
+	}
+
+	/**
+	 * 执行编辑话题
+	 */
+	public function doEditTopic(){
+		//$_POST['name']=="" && $this->error('话题名称不能为空');
+		$_POST['note']=="" && $this->error('话题注释不能为空');
+		//$map['topic_id'] = array('neq', $_POST['topic_id']);
+		//$map['name'] = t($_POST['name']);
+		//if(model('FeedTopic')->where($map)->find()) $this->error('此话题已存在');
+		if($_POST['domain']!=""){
+			$map1['topic_id'] = array('neq', $_POST['topic_id']);
+			$map1['domain'] = t($_POST['domain']);
+			if(model('FeedTopic')->where($map1)->find()) $this->error('此话题域名已存在');
+		}
+		if(h(t($_POST['outlink'])) != ""){
+			$res = preg_match('/^(?:https?|ftp):\/\/(?:www\.)?(?:[a-zA-Z0-9][a-zA-Z0-9\-]*)/',h($_POST['outlink']));
+			if(!$res) $this->error('外链格式错误');
+		}
+		//$data['name'] = t($_POST['name']); 
+		$data['note'] = t($_POST['note']);
+		$data['domain'] = t($_POST['domain']); 
+		$data['des'] = t($_POST['des']); 
+		$data['pic'] = t($_POST['pic']); 
+		$data['topic_user'] = t($_POST['topic_user']); 
+		$data['outlink'] = t($_POST['outlink']); 
+		$data['recommend'] = intval($_POST['recommend']); 
+		if($data['recommend'] == 1){
+			if(!D('feed_topic')->where('topic_id='.intval($_POST['topic_id']))->getField('recommend_time')){
+				$data['recommend_time'] = time();
+			}
+		}else{
+			if(D('feed_topic')->where('topic_id='.intval($_POST['topic_id']))->getField('recommend_time')){
+				$data['recommend_time'] = 0;
+			}
+		}
+		$data['essence'] = intval($_POST['essence']); 
+		$res = D('feed_topic')->where('topic_id='.intval($_POST['topic_id']))->save($data);
+		if($res!==false){
+			$this->assign('jumpUrl', U('admin/Content/topic'));
+			$this->success(L('PUBLIC_SYSTEM_MODIFY_SUCCESS'));
+		}else{
+			$this->error($user->getLastError());
+		}
+	}
+
+	/**
+	 * 模板管理页面
+	 * @return void
+	 */
+	public function template()
+	{
+		$this->assign('pageTitle', '模板管理');
+
+		$this->pageTab[] = array('title'=>'模板管理','tabHash'=>'template','url'=>U('admin/Content/template'));
+		$this->pageTab[] = array('title'=>'添加模板','tabHash'=>'upTemplate','url'=>U('admin/Content/upTemplate'));
+
+		$this->pageButton[] = array('title'=>'添加模板','onclick'=>"location.href='".U('admin/Content/upTemplate')."'");
+		$this->pageButton[] = array('title'=>'删除模板','onclick'=>"admin.delTemplate()");
+
+		$this->pageKeyList = array('tpl_id','name','alias','title','body','lang','type','type2','is_cache','ctime','DOACTION');
+		// 获取模板数据
+		$listData = model('Template')->getTemplate();
+		foreach($listData['data'] as &$value) {
+			$value['is_cache'] = ($value['is_cache'] == 1) ? '是' : '否';
+			$value['ctime'] = date('Y-m-d H:i:s', $value['ctime']);
+			$value['DOACTION'] = '<a href="'.U('admin/Content/upTemplate', array('tpl_id'=>$value['tpl_id'])).'">编辑</a>&nbsp;-&nbsp;<a href="javascript:;" onclick="admin.delTemplate('.$value['tpl_id'].')">删除</a>';
+		}
+
+		$this->displayList($listData);
+	}
+
+	/**
+	 * 添加/编辑模板页面
+	 * @return void
+	 */
+	public function upTemplate()
+	{
+		$_REQUEST['tabHash'] = 'upTemplate';
+		$this->pageTab[] = array('title'=>'模板管理','tabHash'=>'template','url'=>U('admin/Content/template'));
+		if(isset($_GET['tpl_id'])) {
+			$this->assign('pageTitle', '编辑模板');
+			$this->pageTab[] = array('title'=>'编辑模板','tabHash'=>'upTemplate','url'=>U('admin/Content/upTemplate', array('tpl_id'=>intval($_GET['tpl_id']))));
+		} else {
+			$this->assign('pageTitle', '添加模板');
+			$this->pageTab[] = array('title'=>'添加模板','tabHash'=>'upTemplate','url'=>U('admin/Content/upTemplate'));
+		}
+
+		$this->pageKeyList = array('tpl_id','name','alias','title','body','lang','type','type2','is_cache');
+		$this->opt['is_cache'] = array('否', '是');
+
+		$this->notEmpty = array('name','lang');
+		$this->onsubmit = 'admin.checkTemplate(this)';
+
+		// 获取信息
+		$detail = array();
+		if(isset($_GET['tpl_id'])) {
+			$tplId = intval($_GET['tpl_id']);
+			$detail = model('Template')->getTemplateById($tplId);
+		}
+
+		$this->savePostUrl = !empty($detail) ? U('admin/Content/doSaveTemplate') : U('admin/Content/doAddTemplate');
+
+		$this->displayConfig($detail);
+	}
+
+	public function doAddTemplate()
+	{
+		$data['name'] = t($_POST['name']);
+		$data['alias'] = t($_POST['alias']);
+		$data['title'] = t($_POST['title']);
+		$data['body'] = t($_POST['body']);
+		$data['lang'] = t($_POST['lang']);
+		$data['type'] = t($_POST['type']);
+		$data['type2'] = t($_POST['type2']);
+		$data['is_cache'] = intval($_POST['is_cache']);
+		$result = model('Template')->addTemplate($data);
+		if($result) {
+			$this->assign('jumpUrl', U('admin/Content/template'));
+			$this->success('添加成功');
+		}else{
+			$this->error('添加失败');
+		}
+	}
+
+	public function doSaveTemplate()
+	{
+		$tplId = intval($_POST['tpl_id']);
+		$data['name'] = t($_POST['name']);
+		$data['alias'] = t($_POST['alias']);
+		$data['title'] = t($_POST['title']);
+		$data['body'] = t($_POST['body']);
+		$data['lang'] = t($_POST['lang']);
+		$data['type'] = t($_POST['type']);
+		$data['type2'] = t($_POST['type2']);
+		$data['is_cache'] = intval($_POST['is_cache']);
+		$result = model('Template')->upTemplate($tplId, $data);
+		if($result) {
+			$this->assign('jumpUrl', U('admin/Content/template'));
+			$this->success('编辑成功');
+		}else{
+			$this->error('编辑失败');
+		}
+	}
+
+	public function doDelTemplate()
+	{
+		$tplId = intval($_POST['id']);
+		$result = array();
+		if(empty($tplId)) {
+			$result['status'] = 0;
+			$result['data'] = '删除失败';
+			exit(json_encode($result));
+		}
+		// 删除指定模板
+		$res = model('Template')->delTemplate($tplId);
+		if($res) {
+			$result['status'] = 1;
+			$result['data'] = '删除成功';
+		} else {
+			$result['status'] = 0;
+			$result['data'] = '删除失败';
+		}
+		exit(json_encode($result));
 	}
 }

@@ -18,17 +18,17 @@
 	</eq>
     <dl class="lineD">
       <dt>名称：</dt>
-      <dd><input name="name" type="text" value="{$credit['name']}"> *
+      <dd><input name="name" type="text" value="{$credit['name']}" class="s-txt"> *
 	  <p>英文名，保持唯一。推荐使用“应用_动作”，如“blog_add”</p>
     </dl>
     <dl class="lineD">
       <dt>别名：</dt>
-      <dd><input name="alias" type="text" value="{$credit['alias']}">
+      <dd><input name="alias" type="text" value="{$credit['alias']}" class="s-txt">
 	  <p>如“发表博客”</p>
     </dl>
     <dl>
       <dt>类型：</dt>
-      <dd><input name="type" type="text" value="{$credit['type']}"><p>如“blog”</p></dd>
+      <dd><input name="type" type="text" value="{$credit['type']}" class="s-txt"><p>如“blog”</p></dd>
     </dl>
 	<!--
     <dl class="lineD">
@@ -42,7 +42,7 @@
         <dl class="lineD">
           <dt>{$ct.alias}增量：</dt>
           <dd>
-            <input name="{$ct.name}" type="text" value="{$credit[$ct['name']]|intval}"> *
+            <input name="{$ct.name}" type="text" value="{$credit[$ct['name']]|intval}" class="s-txt"> *
             <p>正数为增加，负数为减少</p>
         </dl>
     </volist>

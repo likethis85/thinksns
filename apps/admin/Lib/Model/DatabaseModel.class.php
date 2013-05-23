@@ -1,5 +1,6 @@
 <?php
 class DatabaseModel extends Model {
+     var $tableName = 'user';
 	
 	public function getTableList() {
 		return M('')->query('SHOW TABLE STATUS LIKE "' . C('DB_PREFIX') . '%"');

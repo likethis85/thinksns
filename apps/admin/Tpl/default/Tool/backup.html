@@ -16,7 +16,7 @@
     <dl class="" id="backup_size">
       <dt>分卷大小: </dt>
       <dd>
-        <input type="text" name="sizelimit" value="1000"> K
+        <input type="text" name="sizelimit" value="10000"> K
       </dd>
     </dl>
     <dl class="" id="backup_table" style="display:none">
@@ -56,7 +56,7 @@
       <php>$filename = substr($vo['filename'], 0, -4);</php>
       <tr overstyle='on' id="backup_{$filename}">
         <td><input type="checkbox" name="checkbox" id="checkbox2" onclick="checkon(this)" value="{$filename}"></td>
-        <td><a href="<php>echo SITE_URL.'/data/database/'.$vo['filename'];</php>" target="_blank">{$vo.filename}</a></td>
+        <td><a href="<php>echo DATA_URL.'/database/'.$vo['filename'];</php>" target="_blank">{$vo.filename}</a></td>
         <td>{$vo.addtime}</td>
         <td>{$vo.filesize}</td>
         <td>

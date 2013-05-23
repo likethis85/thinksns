@@ -1,16 +1,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<link href="__PUBLIC__/admin/style.css" rel="stylesheet" type="text/css">
+<link href="__APP__/admin_header.css" rel="stylesheet" type="text/css">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<title>{$ts['site']['site_name']}后台管理</title>
-<script type="text/javascript" src="__PUBLIC__/js/jquery.js"></script>
-<script type="text/javascript" src="__PUBLIC__/js/jquery-ui-1.8.6.custom.min.js"></script>
-<script type="text/javascript" src="__PUBLIC__/js/jquery.datapicker.js"></script>
-<script type="text/javascript" src="__PUBLIC__/js/jquery.datapicker.css"></script>
+<title>{$site.site_name} - {$site.site_slogan}</title>
+<script type="text/javascript" src="__THEME__/js/jquery.js"></script>
 <script type="text/javascript">
+var SITE_URL ='<php> echo SITE_URL;</php>';
+var APPNAME   = '<php> echo APP_NAME;</php>';
 /* 按下F5时仅刷新iframe页面 */
 function inactiveF5(e) {
-	return ;
 	e=window.event||e;
 	var key = e.keyCode;
 	if (key == 116){
@@ -38,40 +36,94 @@ function nof5() {
 		} //END for()
 	} //END if()
 }
+//模拟ts U函数 需要预先定义JS全局变量 SITE_URL 和 APPNAME
+
+var U =function(url,params){
+	var website = SITE_URL+'/index.php';
+	url = url.split('/');
+	if(url[0]=='' || url[0]=='@')
+		url[0] = APPNAME;
+	if (!url[1])
+		url[1] = 'Index';
+	if (!url[2])
+		url[2] = 'index';
+	website = website+'?app='+url[0]+'&mod='+url[1]+'&act='+url[2];
+	if(params){
+		params = params.join('&');
+		website = website + '&' + params;
+	}
+	return website;
+};
 
 function refresh() {
 	parent.MainIframe.location.reload();
 }
 
+function addTonav(name,url){
+	var appname = url.split('/');
+	$('.main_nav').append('<a href="#" onclick="gotoApp(this,\''+url+'\')" appname="'+appname[0]+'">'+name+'</a>');
+	$.post(U('admin/Home/addNav'),{appname:appname[0],url:url},function(){});
+}
+
+function removeFromNav(app){
+	$('.main_nav').find('a').each(function(){
+		if($(this).attr('appname') == app){
+			$(this).remove();
+			$.post(U('admin/Home/removeNav'),{appname:app},function(){});
+		}
+	});
+}
+
+function gotoApp(obj,url){
+	
+	switchChannel('extends');
+
+	$('.main_nav').find('a').removeClass('on');
+
+	$(obj).addClass('on');
+
+	obj.className = 'on';
+
+	parent.MainIframe.location = U(url);
+
+}
+
 document.onkeydown=inactiveF5;
+
 </script>
 </head>
 
-<body scroll="no" style="margin:0; padding:0;" onload="nof5()">
+<body scroll="no" style="margin:0; padding:0;" onLoad="nof5()">
+
 <table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td colspan="3">
 		<div class="header"><!-- 头部 begin -->
-		    <div class="logo"><a href="{:U('admin/Index/index')}" >&nbsp;</a></div>
+		    <div class="logo">
+		    	<a href="{:U('admin/Index/index')}"><strong style="font-size:18px;">{:L('SYSTEM_MANAGEMENT_CENTER')}</strong></a>
+		    </div>
 		    <div class="nav_sub">
-		    	您好,{$mid|getUserName}&nbsp; | <a href="{:U('home/Index/index')}">返回前台</a> | <a href="javascript:void(0);" onclick="refresh();">刷新</a> | <a href="{:U('home/Public/logoutAdmin')}">退出</a><br/>
+		    	{:L('PUBLIC_HELLO')},{$user.uname}&nbsp; | <a href="{:U('public/Index/index')}">{:L('SYSTEM_BACK_TO_FRONT')}</a> | <a href="javascript:void(0);" onClick="refresh();">{:L('SYSTEM_REFRESH')}</a> | <a href="{:U('admin/Public/logout')}">{:L('PUBLIC_LOGOUT')}</a><br/>
 		    	<div id="TopTime"></div>
 		    </div>
 		    <div class="main_nav">
 		    	<volist name="channel" id="vo">
 		    		<a id="channel_{$key}" <eq name="key" value="index">class="on"</eq> href="javascript:void(0)" onclick="switchChannel('{$key}');" hidefocus="true" style="outline:none;">{$vo}</a>
 		    	</volist>
+		    	<volist name='nav' id ='vo'>
+		    		<a href="#" onclick="gotoApp(this,'{$vo[url]}')" appname="{$vo.appname}">{$vo.name}</a>
+		    	</volist>	
 			</div>                   
 		</div>
 		<div class="header_line"><span>&nbsp;</span></div>
 	</td>
   </tr>
   <tr>
-  	<td width="200px" height="100%" valign="top" id="FrameTitle" background="__PUBLIC__/admin/images/left_bg.gif">
+  	<td width="200px" height="100%" valign="top" id="FrameTitle" background="__APP__/image/left_bg.gif">
   		<div class="LeftMenu">
 		<php>
 		  $iterator = 1;
-		  $home_url = ''; // 后台首页url
+		  $home_url = '';
 		</php>
   		<!-- 第一级菜单，即大频道 -->
   		<php>foreach($menu as $menu_1_name => $menu_2) {</php>
@@ -79,7 +131,7 @@ document.onkeydown=inactiveF5;
 	      	<!-- 第二级菜单 -->
 	      	<php>foreach($menu_2 as $menu_2_name => $menu_3) {</php>
 		        <li class="treemenu">
-		          <a id="root_{$iterator}" class="actuator" href="javascript:void(0)" onclick="switch_root_menu('{$iterator}');" hidefocus="true" style="outline:none;">{$menu_2_name}</a>
+		          <a id="root_{$iterator}" class="actuator" href="javascript:void(0)" onClick="switch_root_menu('{$iterator}');" hidefocus="true" style="outline:none;">{$menu_2_name}</a>
 		          <ul id="tree_{$iterator}" class="submenu">
 		            <php>++ $iterator;</php>
 		          	<!-- 第三级菜单 -->
@@ -96,10 +148,11 @@ document.onkeydown=inactiveF5;
 		</div>
 	</td>
     <td>
-   	  <iframe onload="nof5()" id="MainIframe" name="MainIframe" scrolling="yes" src="{$home_url}" width="100%" height="100%" frameborder="0" noresize> </iframe>
+   	  <iframe onload="nof5()" id="MainIframe" name="MainIframe" scrolling="yes"  width="100%" height="100%" frameborder="0" noresize> </iframe>
 	</td>
   </tr>
 </table>
+
 </body>
 
 <script type="text/javascript">
@@ -114,8 +167,10 @@ document.onkeydown=inactiveF5;
 	
 	//切换频道（即头部的tab）
 	function switchChannel(channel) {
-		if(current_channel == channel) return false;
-		
+
+		//if(current_channel == channel) return false;
+		$('.main_nav').find('a').removeClass('on');
+
 		$('#channel_'+current_channel).removeClass('on');
 		$('#channel_'+channel).addClass('on');
 		
@@ -141,10 +196,10 @@ document.onkeydown=inactiveF5;
 		root = $('#tree_'+root);
 		if (root.css('display') == 'block') {
 			root.css('display', 'none');
-			root.parent().css('backgroundImage', 'url(__PUBLIC__/admin/images/ArrOn.png)');
+			root.parent().css('backgroundImage', 'url(__APP__/image/ArrOn.png)');
 		}else {
 			root.css('display', 'block');
-			root.parent().css('backgroundImage', 'url(__PUBLIC__/admin/images/ArrOff.png)');
+			root.parent().css('backgroundImage', 'url(__APP__/image/ArrOff.png)');
 		}
 	}
 	
@@ -158,33 +213,6 @@ document.onkeydown=inactiveF5;
 		parent.MainIframe.location = url;
 	}
 	
-	/*
-	function resetEscAndF5(e) {
-		e = e ? e : window.event;
-		actualCode = e.keyCode ? e.keyCode : e.charCode;
-		if(actualCode == 116 && parent.MainIframe) {
-			parent.MainIframe.location.reload();
-			if(document.all) {
-				e.keyCode = 0;
-				e.returnValue = false;
-			} else {
-				e.cancelBubble = true;
-				e.preventDefault();
-			}
-		}
-	}
 	
-	function _attachEvent(obj, evt, func, eventobj) {
-		eventobj = !eventobj ? obj : eventobj;
-		if(obj.addEventListener) {
-			obj.addEventListener(evt, func, false);
-		} else if(eventobj.attachEvent) {
-			obj.attachEvent('on' + evt, func);
-		}
-	}
-	
-	_attachEvent(document.documentElement, 'keydown', resetEscAndF5);
-	_attachEvent(window, 'keydown', resetEscAndF5, parent.frames[0]);
-	*/
 </script>
 </html>

@@ -6,7 +6,7 @@ body
 	font-family: Verdana, Geneva, Helvetica, Trebuchet MS, Sans-serif;
 	font-size: 12px;
 	color: #333;
-	background:url(images/bgbody.gif) #CFE1ED repeat-x;
+	background:url(bgbody.gif) #CFE1ED repeat-x;
 }
 a
 {

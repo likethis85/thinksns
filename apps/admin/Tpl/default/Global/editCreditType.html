@@ -19,12 +19,12 @@
 	</eq>
     <dl class="lineD">
       <dt>名称：</dt>
-      <dd><input name="name" type="text" value="{$creditType['name']}"> *
-	  <p>英文名，保持唯一。如“score”、“experience”</p>
+      <dd><input name="name" type="text" value="{$creditType['name']}" class="s-txt" <php>if($forbidEdit) echo 'readonly';</php> > *
+	  <p>英文名，保持唯一。如“score”、“experience”. 注：在运行环境中“score”、“experience”这两个类型的名称不可修改</p>
     </dl>
     <dl>
       <dt>别名：</dt>
-      <dd><input name="alias" type="text" value="{$creditType['alias']}">
+      <dd><input name="alias" type="text" value="{$creditType['alias']}" class="s-txt">
 	  <p>如“积分”，“经验”</p>
     </dl>
     <div class="page_btm">
